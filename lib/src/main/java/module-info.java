@@ -1,6 +1,5 @@
 module lib {
     requires kotlin.stdlib;
-    requires transitive kotlinx.serialization.core;
-    requires transitive kotlinx.serialization.json;
+    requires transitive otherLib;
     exports org.mycompany2;
 }
