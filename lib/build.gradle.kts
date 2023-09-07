@@ -24,46 +24,37 @@ kotlin {
 
     target {
         compilations {
-            val other by registering {
+            val other2 by registering {
                 val c = this
                 dependencies {
                     api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
                 }
                 compileJavaTaskProvider.configure {
-
-                    // `hackDestinationDirectory` is used to prevent:
-                    //
-                    //   > Task :lib:compileKotlin FAILED
-                    //   e: file:///.../jpms-test-stuff/lib/src/main/kotlin/org/mycompany2/utils.kt:5:23 Symbol is declared in unnamed module which is not read by current module
-                    //   e: file:///.../jpms-test-stuff/lib/src/main/kotlin/org/mycompany2/utils.kt:7:23 Symbol is declared in unnamed module which is not read by current module
-                    // ----------------------
-                    // TODO: uncomment following line
-                    // hackDestinationDirectory(c)
                     options.compilerArgumentProviders.add(
                         JPMSPatch(project.sourceSets, c)
                     )
                 }
             }
 
-            val main by getting {
-                val c = this
+            val otherJar = tasks.register<Jar>("otherJar") {
+                dependsOn(other2.get().compileTaskProvider)
+                archiveAppendix.set("other")
+                from(other2.get().output.classesDirs)
+            }
+
+            val main2 by registering {
                 dependencies {
-                    val o = other.get()
-                    compileOnly(o.compileDependencyFiles + o.output.classesDirs)
+                    compileOnly(other2.get().compileDependencyFiles)
+                    compileOnly(files(otherJar))
                 }
                 compileJavaTaskProvider.configure {
-                    // hackDestinationDirectory(c)
                     options.compilerArgumentProviders.add(
-                        JPMSPatch(project.sourceSets, c)
+                        JPMSPatch(project.sourceSets, this@registering)
                     )
                 }
             }
         }
     }
-}
-
-fun JavaCompile.hackDestinationDirectory(compilation: KotlinWithJavaCompilation<KotlinJvmOptions, KotlinJvmCompilerOptions>) {
-    destinationDirectory.set(project.layout.dir(project.provider { compilation.output.classesDirs.files.first { it.path.contains("kotlin") } }))
 }
 
 class JPMSPatch @Inject constructor(
